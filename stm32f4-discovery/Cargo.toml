@@ -7,6 +7,8 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+defmt = "0.3.0"
+defmt-rtt = "0.3.0"
 cortex-m = "0.7.2"
 cortex-m-rt = { version = "0.7.0", features = ["device"] }
 # Panic behaviour, see https://crates.io/keywords/panic-impl for alternatives

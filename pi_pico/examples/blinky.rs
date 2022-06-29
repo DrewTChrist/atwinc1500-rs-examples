@@ -20,6 +20,9 @@ use bsp::hal::{
 };
 
 use atwinc1500::Atwinc1500;
+use atwinc1500::gpio::AtwincGpio;
+use atwinc1500::gpio::GpioDirection;
+use atwinc1500::gpio::GpioValue;
 
 #[entry]
 fn main() -> ! {
@@ -42,7 +45,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
@@ -68,7 +71,17 @@ fn main() -> ! {
     let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
 
 
-    let _atwinc1500 = Atwinc1500::new(spi, cs, irq, reset, en_wake, false);
+    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+
+    match atwinc1500 {
+        Ok(mut at) => {
+            // Turn on the green LED 
+            // on the Adafruit Atwinc1500 breakout
+            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
+            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
+        },
+        Err(e) => info!("{}", e),
+    }
 
     loop {}
 }

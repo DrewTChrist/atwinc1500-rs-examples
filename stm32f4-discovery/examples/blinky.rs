@@ -2,7 +2,8 @@
 #![no_main]
 
 use panic_halt as _;
-
+use defmt::*;
+use defmt_rtt as _;
 use stm32f3xx_hal as hal;
 
 use cortex_m::asm;
@@ -14,6 +15,9 @@ use hal::spi::Spi;
 use hal::delay::Delay;
 
 use atwinc1500::Atwinc1500;
+use atwinc1500::gpio::AtwincGpio;
+use atwinc1500::gpio::GpioDirection;
+use atwinc1500::gpio::GpioValue;
 
 #[entry]
 fn main() -> ! {
@@ -50,7 +54,17 @@ fn main() -> ! {
 
     let spi = Spi::new(dp.SPI3, (sck, miso, mosi), 16.MHz(), clocks, &mut rcc.apb1);
     let delay = Delay::new(cp.SYST, clocks);
-    let _atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+
+    match atwinc1500 {
+        Ok(mut at) => {
+            // Turn on the green LED 
+            // on the Adafruit Atwinc1500 breakout
+            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
+            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
+        },
+        Err(e) => info!("{}", e),
+    }
 
     loop {
         asm::wfi();
