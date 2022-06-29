@@ -16,22 +16,40 @@ const GPIO_8: u8 = 8;
 const GPIO_5: u8 = 5;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let irq = Gpio::new()?.get(GPIO_27)?.into_input_pullup();
-    let reset = Gpio::new()?.get(GPIO_22)?.into_output();
-    let enable = Gpio::new()?.get(GPIO_17)?.into_output();
+
+    // Define pins
+    let mut irq = Gpio::new()?.get(GPIO_27)?.into_input_pullup();
+    let mut reset = Gpio::new()?.get(GPIO_22)?.into_output();
+    let mut enable = Gpio::new()?.get(GPIO_17)?.into_output();
     let mut wake = Gpio::new()?.get(GPIO_5)?.into_output();
-    let cs = Gpio::new()?.get(GPIO_8)?.into_output();
+    let mut cs = Gpio::new()?.get(GPIO_8)?.into_output();
+
+    // Define spi
     let spi = Spi::new(Bus::Spi0, SlaveSelect::Ss0, 8_000_000, Mode::Mode0)?;
+
+    // Define delay
     let delay = Delay::new();
+
+    // Turn off reset_on_drop
+    irq.set_reset_on_drop(false);
+    reset.set_reset_on_drop(false);
+    enable.set_reset_on_drop(false);
+    wake.set_reset_on_drop(false);
+    cs.set_reset_on_drop(false);
+
     wake.toggle();
+
     let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, enable, false);
+
     match atwinc1500 {
         Ok(mut at) => {
+            // Turn on the green LED 
+            // on the Adafruit Atwinc1500 breakout
             at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
             at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
         },
         Err(e) => panic!("{}", e),
     }
+
     loop {}
-    //Ok(())
 }
