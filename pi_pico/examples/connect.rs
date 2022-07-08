@@ -18,10 +18,13 @@ use bsp::hal::{
     watchdog::Watchdog,
 };
 
-use atwinc1500::gpio::AtwincGpio;
-use atwinc1500::gpio::GpioDirection;
-use atwinc1500::gpio::GpioValue;
+use atwinc1500::wifi::Channel;
+use atwinc1500::wifi::ConnectionParameters;
+use atwinc1500::wifi::SecurityParameters;
+use atwinc1500::wifi::SecurityType;
 use atwinc1500::Atwinc1500;
+
+use core::env;
 
 #[entry]
 fn main() -> ! {
@@ -71,12 +74,33 @@ fn main() -> ! {
 
     let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
 
+    // Read ssid from environment variable
+    const SSID: &[u8] = env!("SSID").as_bytes();
+    // Read password from environment variable
+    const PASS: &[u8] = env!("PASS").as_bytes();
+
+    // Creates the security parameters for
+    // our connection. Can support WEP, WPA/WPA2, or
+    // enterprise WPA. For personal WPA just a pass
+    // phrase is needed.
+    let security = SecurityParameters::new(
+        SecurityType::WpaPsk,
+        None,       // wpa enterprise username
+        Some(PASS), // password
+        None,       // wep key index
+        None,       // wep key size
+        None,       // wep key
+    );
+
+    // Security parameters get passed to the connection parameters
+    // with the ssid
+    let connection = ConnectionParameters::new(security, Channel::default(), SSID, 0);
+
     match atwinc1500 {
         Ok(mut at) => {
-            // Turn on the green LED
-            // on the Adafruit Atwinc1500 breakout
-            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
-            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
+            if let Err(e) = at.connect_network(connection) {
+                info!("{}", e);
+            }
         }
         Err(e) => info!("{}", e),
     }

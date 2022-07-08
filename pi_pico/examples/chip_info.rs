@@ -75,7 +75,7 @@ fn main() -> ! {
             if let Ok(fw) = at.get_firmware_version() {
                 info!("Firmware Version: {}", fw);
             }
-             
+
             // Get and print the mac address
             // of the Atwinc1500
             if let Ok(mac) = at.get_mac_address() {
