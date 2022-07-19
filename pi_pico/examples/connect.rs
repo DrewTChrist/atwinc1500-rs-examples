@@ -76,7 +76,7 @@ fn main() -> ! {
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
     let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
 
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
 
     // Read ssid from environment variable
     const SSID: &[u8] = env!("SSID").as_bytes();
@@ -100,7 +100,8 @@ fn main() -> ! {
     // with the ssid
     let connection = ConnectionParameters::new(security, Channel::default(), SSID, 1);
 
-    at.connect_network(connection).unwrap();
+    // Connect to the network with our connection
+    atwinc1500.connect_network(connection).unwrap();
 
     loop {}
 }
