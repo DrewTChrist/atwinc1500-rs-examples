@@ -4,6 +4,7 @@
 use cortex_m_rt::entry;
 use defmt::*;
 use defmt_rtt as _;
+use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Extensions;
 use panic_probe as _;
@@ -63,16 +64,19 @@ fn main() -> ! {
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        16_000_000u32.Hz(),
+        11_000_000u32.Hz(),
         &embedded_hal::spi::MODE_0,
     );
+
+    let mut onboard_led = pins.led.into_push_pull_output();
+    onboard_led.set_high().unwrap();
 
     let cs: gpio::DynPin = pins.gpio17.into_push_pull_output().into();
     let irq: gpio::DynPin = pins.gpio22.into_pull_up_input().into();
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
     let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
 
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
 
     // Read ssid from environment variable
     const SSID: &[u8] = env!("SSID").as_bytes();
@@ -94,16 +98,9 @@ fn main() -> ! {
 
     // Security parameters get passed to the connection parameters
     // with the ssid
-    let connection = ConnectionParameters::new(security, Channel::default(), SSID, 0);
+    let connection = ConnectionParameters::new(security, Channel::default(), SSID, 1);
 
-    match atwinc1500 {
-        Ok(mut at) => {
-            if let Err(e) = at.connect_network(connection) {
-                info!("{}", e);
-            }
-        }
-        Err(e) => info!("{}", e),
-    }
+    at.connect_network(connection).unwrap();
 
     loop {}
 }
