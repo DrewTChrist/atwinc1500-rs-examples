@@ -21,8 +21,6 @@ use bsp::hal::{
 
 use atwinc1500::wifi::Channel;
 use atwinc1500::wifi::ConnectionParameters;
-use atwinc1500::wifi::SecurityParameters;
-use atwinc1500::wifi::SecurityType;
 use atwinc1500::Atwinc1500;
 
 use core::env;
@@ -83,24 +81,11 @@ fn main() -> ! {
     // Read password from environment variable
     const PASS: &[u8] = env!("PASS").as_bytes();
 
-    // Creates the security parameters for
-    // our connection. Can support WEP, WPA/WPA2, or
-    // enterprise WPA. For personal WPA just a pass
-    // phrase is needed.
-    let security = SecurityParameters::new(
-        SecurityType::WpaPsk,
-        None,       // wpa enterprise username
-        Some(PASS), // password
-        None,       // wep key index
-        None,       // wep key size
-        None,       // wep key
-    );
-
-    // Security parameters get passed to the connection parameters
-    // with the ssid
-    let connection = ConnectionParameters::new(security, Channel::default(), SSID, 1);
 
     // Connect to the network with our connection
+    // parameters
+    let connection = ConnectionParameters::wpa_psk(SSID, PASS, Channel::default(), 0);
+
     atwinc1500.connect_network(connection).unwrap();
 
     loop {}
