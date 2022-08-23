@@ -66,24 +66,17 @@ fn main() -> ! {
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
     let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
 
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
 
-    match atwinc1500 {
-        Ok(mut at) => {
-            // Get and print the version of the firmware
-            // running on the Atwinc1500
-            if let Ok(fw) = at.get_firmware_version() {
-                info!("Firmware Version: {}", fw);
-            }
+    // Get and print the version of the firmware
+    // running on the Atwinc1500
+    let version = atwinc1500.get_firmware_version().unwrap();
+    info!("Firmware Version: {}", version);
 
-            // Get and print the mac address
-            // of the Atwinc1500
-            if let Ok(mac) = at.get_mac_address() {
-                info!("Mac Address: {}", mac);
-            }
-        }
-        Err(e) => info!("{}", e),
-    }
+    // Get and print the mac address
+    // of the Atwinc1500
+    let mac = atwinc1500.get_mac_address().unwrap();
+    info!("Mac Address: {}", mac);
 
     loop {}
 }

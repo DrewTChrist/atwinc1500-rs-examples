@@ -2,7 +2,6 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use defmt::*;
 use defmt_rtt as _;
 use embedded_time::fixed_point::FixedPoint;
 use embedded_time::rate::Extensions;
@@ -69,17 +68,12 @@ fn main() -> ! {
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
     let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
 
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
 
-    match atwinc1500 {
-        Ok(mut at) => {
-            // Turn on the green LED
-            // on the Adafruit Atwinc1500 breakout
-            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
-            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
-        }
-        Err(e) => info!("{}", e),
-    }
+    // Turn on the green LED
+    // on the Adafruit Atwinc1500 breakout
+    atwinc1500.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output).unwrap();
+    atwinc1500.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High).unwrap();
 
     loop {}
 }
