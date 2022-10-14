@@ -15,5 +15,4 @@ cortex-m-rt = { version = "0.7.0", features = ["device"] }
 panic-halt = "0.2.0"
 # Replace stm32f303xc with your target chip, see next section for more info
 stm32f3xx-hal = { version = "0.9.0", features = ["ld", "rt", "stm32f303xc"] }
-atwinc1500 = { path = "../../atwinc1500-rs" }
-
+atwinc1500 = "0.1.0"

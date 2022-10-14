@@ -1,8 +1,8 @@
 use std::error::Error;
 
 use rppal::gpio::Gpio;
-use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 use rppal::hal::Delay;
+use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 
 use atwinc1500::Atwinc1500;
 
@@ -13,7 +13,6 @@ const GPIO_8: u8 = 8;
 const GPIO_5: u8 = 5;
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     // Define pins
     let mut irq = Gpio::new()?.get(GPIO_27)?.into_input_pullup();
     let mut reset = Gpio::new()?.get(GPIO_22)?.into_output();
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             if let Ok(fw) = at.get_firmware_version() {
                 println!("Firmware Version: {}", fw);
             }
-             
+
             // Get and print the mac address
             // of the Atwinc1500
             if let Ok(mac) = at.get_mac_address() {

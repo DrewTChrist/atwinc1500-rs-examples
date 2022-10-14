@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 rppal = { version = "0.13.1", features = ["hal-unproven"] }
-atwinc1500 = { path = "../../atwinc1500-rs" }
+atwinc1500 = "0.1.0"

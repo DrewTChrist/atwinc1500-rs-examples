@@ -72,8 +72,12 @@ fn main() -> ! {
 
     // Turn on the green LED
     // on the Adafruit Atwinc1500 breakout
-    atwinc1500.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output).unwrap();
-    atwinc1500.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High).unwrap();
+    atwinc1500
+        .set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output)
+        .unwrap();
+    atwinc1500
+        .set_gpio_value(AtwincGpio::Gpio4, GpioValue::High)
+        .unwrap();
 
     loop {}
 }

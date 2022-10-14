@@ -81,7 +81,6 @@ fn main() -> ! {
     // Read password from environment variable
     const PASS: &[u8] = env!("PASS").as_bytes();
 
-
     // Connect to the network with our connection
     // parameters
     let connection = ConnectionParameters::wpa_psk(SSID, PASS, Channel::default(), 0);

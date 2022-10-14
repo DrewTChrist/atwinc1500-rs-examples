@@ -1,23 +1,23 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
 use defmt::*;
 use defmt_rtt as _;
+use panic_halt as _;
 use stm32f3xx_hal as hal;
 
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
+use hal::delay::Delay;
 use hal::pac;
 use hal::prelude::*;
 use hal::spi::Spi;
-use hal::delay::Delay;
 
-use atwinc1500::Atwinc1500;
 use atwinc1500::gpio::AtwincGpio;
 use atwinc1500::gpio::GpioDirection;
 use atwinc1500::gpio::GpioValue;
+use atwinc1500::Atwinc1500;
 
 #[entry]
 fn main() -> ! {
@@ -47,10 +47,22 @@ fn main() -> ! {
         .pc12
         .into_af_push_pull(&mut gpioc.moder, &mut gpioc.otyper, &mut gpioc.afrh);
 
-    let cs = gpioe.pe8.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let reset = gpioe.pe9.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let en_wake = gpioe.pe10.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let irq = gpioe.pe11.into_pull_up_input(&mut gpioe.moder, &mut gpioe.pupdr).downgrade();
+    let cs = gpioe
+        .pe8
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let reset = gpioe
+        .pe9
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let en_wake = gpioe
+        .pe10
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let irq = gpioe
+        .pe11
+        .into_pull_up_input(&mut gpioe.moder, &mut gpioe.pupdr)
+        .downgrade();
 
     let spi = Spi::new(dp.SPI3, (sck, miso, mosi), 16.MHz(), clocks, &mut rcc.apb1);
     let delay = Delay::new(cp.SYST, clocks);
@@ -58,11 +70,11 @@ fn main() -> ! {
 
     match atwinc1500 {
         Ok(mut at) => {
-            // Turn on the green LED 
+            // Turn on the green LED
             // on the Adafruit Atwinc1500 breakout
             at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
             at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
-        },
+        }
         Err(e) => info!("{}", e),
     }
 

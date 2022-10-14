@@ -1,13 +1,13 @@
 use std::error::Error;
 
 use rppal::gpio::Gpio;
-use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 use rppal::hal::Delay;
+use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 
-use atwinc1500::Atwinc1500;
 use atwinc1500::gpio::AtwincGpio;
 use atwinc1500::gpio::GpioDirection;
 use atwinc1500::gpio::GpioValue;
+use atwinc1500::Atwinc1500;
 
 const GPIO_27: u8 = 27;
 const GPIO_22: u8 = 22;
@@ -16,7 +16,6 @@ const GPIO_8: u8 = 8;
 const GPIO_5: u8 = 5;
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     // Define pins
     let mut irq = Gpio::new()?.get(GPIO_27)?.into_input_pullup();
     let mut reset = Gpio::new()?.get(GPIO_22)?.into_output();
@@ -43,11 +42,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match atwinc1500 {
         Ok(mut at) => {
-            // Turn on the green LED 
+            // Turn on the green LED
             // on the Adafruit Atwinc1500 breakout
             at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output);
             at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High);
-        },
+        }
         Err(e) => panic!("{}", e),
     }
 

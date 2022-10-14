@@ -1,18 +1,18 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
 use defmt::*;
 use defmt_rtt as _;
+use panic_halt as _;
 use stm32f3xx_hal as hal;
 
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
+use hal::delay::Delay;
 use hal::pac;
 use hal::prelude::*;
 use hal::spi::Spi;
-use hal::delay::Delay;
 
 use atwinc1500::Atwinc1500;
 
@@ -44,10 +44,22 @@ fn main() -> ! {
         .pc12
         .into_af_push_pull(&mut gpioc.moder, &mut gpioc.otyper, &mut gpioc.afrh);
 
-    let cs = gpioe.pe8.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let reset = gpioe.pe9.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let en_wake = gpioe.pe10.into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper).downgrade();
-    let irq = gpioe.pe11.into_pull_up_input(&mut gpioe.moder, &mut gpioe.pupdr).downgrade();
+    let cs = gpioe
+        .pe8
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let reset = gpioe
+        .pe9
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let en_wake = gpioe
+        .pe10
+        .into_push_pull_output(&mut gpioe.moder, &mut gpioe.otyper)
+        .downgrade();
+    let irq = gpioe
+        .pe11
+        .into_pull_up_input(&mut gpioe.moder, &mut gpioe.pupdr)
+        .downgrade();
 
     let spi = Spi::new(dp.SPI3, (sck, miso, mosi), 16.MHz(), clocks, &mut rcc.apb1);
     let delay = Delay::new(cp.SYST, clocks);
@@ -60,7 +72,7 @@ fn main() -> ! {
             if let Ok(fw) = at.get_firmware_version() {
                 info!("Firmware Version: {}", fw);
             }
-             
+
             // Get and print the mac address
             // of the Atwinc1500
             if let Ok(mac) = at.get_mac_address() {
