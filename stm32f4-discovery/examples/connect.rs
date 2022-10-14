@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use defmt::*;
 use defmt_rtt as _;
 use panic_halt as _;
 use stm32f3xx_hal as hal;
@@ -14,10 +13,11 @@ use hal::pac;
 use hal::prelude::*;
 use hal::spi::Spi;
 
-use atwinc1500::gpio::AtwincGpio;
-use atwinc1500::gpio::GpioDirection;
-use atwinc1500::gpio::GpioValue;
 use atwinc1500::Atwinc1500;
+use atwinc1500::wifi::Channel;
+use atwinc1500::wifi::ConnectionParameters;
+
+use core::env;
 
 #[entry]
 fn main() -> ! {
@@ -66,17 +66,18 @@ fn main() -> ! {
 
     let spi = Spi::new(dp.SPI3, (sck, miso, mosi), 16.MHz(), clocks, &mut rcc.apb1);
     let delay = Delay::new(cp.SYST, clocks);
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false);
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
 
-    match atwinc1500 {
-        Ok(mut at) => {
-            // Turn on the green LED
-            // on the Adafruit Atwinc1500 breakout
-            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output).unwrap();
-            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High).unwrap();
-        }
-        Err(e) => info!("{}", e),
-    }
+    // Read ssid from environment variable
+    const SSID: &[u8] = env!("SSID").as_bytes();
+    // Read password from environment variable
+    const PASS: &[u8] = env!("PASS").as_bytes();
+
+    // Connect to the network with our connection
+    // parameters
+    let connection = ConnectionParameters::wpa_psk(SSID, PASS, Channel::default(), 0);
+
+    atwinc1500.connect_network(connection).unwrap();
 
     loop {
         asm::wfi();

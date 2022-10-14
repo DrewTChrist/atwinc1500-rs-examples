@@ -4,10 +4,11 @@ use rppal::gpio::Gpio;
 use rppal::hal::Delay;
 use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
 
-use atwinc1500::gpio::AtwincGpio;
-use atwinc1500::gpio::GpioDirection;
-use atwinc1500::gpio::GpioValue;
 use atwinc1500::Atwinc1500;
+use atwinc1500::wifi::Channel;
+use atwinc1500::wifi::ConnectionParameters;
+
+use core::env;
 
 const GPIO_27: u8 = 27;
 const GPIO_22: u8 = 22;
@@ -38,17 +39,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     wake.toggle();
 
-    let atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, enable, false);
 
-    match atwinc1500 {
-        Ok(mut at) => {
-            // Turn on the green LED
-            // on the Adafruit Atwinc1500 breakout
-            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output).unwrap();
-            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High).unwrap();
-        }
-        Err(e) => panic!("{}", e),
-    }
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, enable, false).unwrap();
+
+    // Read ssid from environment variable
+    const SSID: &[u8] = env!("SSID").as_bytes();
+    // Read password from environment variable
+    const PASS: &[u8] = env!("PASS").as_bytes();
+
+    // Connect to the network with our connection
+    // parameters
+    let connection = ConnectionParameters::wpa_psk(SSID, PASS, Channel::default(), 0);
+
+    atwinc1500.connect_network(connection).unwrap();
 
     loop {}
 }
