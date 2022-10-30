@@ -2,31 +2,47 @@
 #![no_main]
 
 use cortex_m_rt::entry;
+use critical_section::Mutex;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
-use embedded_time::fixed_point::FixedPoint;
-use embedded_time::rate::Extensions;
+use fugit::RateExtU32;
 use panic_probe as _;
 
 use rp_pico as bsp;
 
+use bsp::hal::gpio::Interrupt::EdgeLow;
+
+use bsp::hal::pac::interrupt;
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
-    gpio, pac,
+    gpio,
+    gpio::dynpin::DynPin,
+    pac,
     sio::Sio,
     spi,
     watchdog::Watchdog,
 };
 
 use atwinc1500::wifi::Channel;
-use atwinc1500::wifi::ConnectionParameters;
+use atwinc1500::wifi::Connection;
 use atwinc1500::Atwinc1500;
 
+use core::cell::RefCell;
 use core::env;
+
+type Atwinc =
+    Atwinc1500<'static, spi::Spi<spi::Enabled, pac::SPI0, 8>, cortex_m::delay::Delay, DynPin>;
+type IrqPin = bsp::hal::gpio::Pin<
+    bsp::hal::gpio::bank0::Gpio22,
+    bsp::hal::gpio::Input<bsp::hal::gpio::PullUp>,
+>;
+static ATWINC: Mutex<RefCell<Option<Atwinc>>> = Mutex::new(RefCell::new(None));
+static IRQ_PIN: Mutex<RefCell<Option<IrqPin>>> = Mutex::new(RefCell::new(None));
 
 #[entry]
 fn main() -> ! {
+    info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -46,7 +62,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
@@ -70,11 +86,18 @@ fn main() -> ! {
     onboard_led.set_high().unwrap();
 
     let cs: gpio::DynPin = pins.gpio17.into_push_pull_output().into();
-    let irq: gpio::DynPin = pins.gpio22.into_pull_up_input().into();
+    let irq: bsp::hal::gpio::Pin<
+        bsp::hal::gpio::bank0::Gpio22,
+        bsp::hal::gpio::Input<bsp::hal::gpio::PullUp>,
+    > = pins.gpio22.into_pull_up_input().into();
+    irq.set_interrupt_enabled(EdgeLow, true);
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
-    let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
+    let mut en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
+    en_wake.set_high().unwrap();
 
-    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
+    let atwinc1500 = Atwinc1500::new(spi, delay, cs, reset, false);
+
+    info!("Create atwinc struct");
 
     // Read ssid from environment variable
     const SSID: &[u8] = env!("SSID").as_bytes();
@@ -83,9 +106,60 @@ fn main() -> ! {
 
     // Connect to the network with our connection
     // parameters
-    let connection = ConnectionParameters::wpa_psk(SSID, PASS, Channel::default(), 0);
+    let connection = Connection::wpa_psk(SSID, PASS, Channel::default(), 0);
 
-    atwinc1500.connect_network(connection).unwrap();
+    critical_section::with(|cs| {
+        ATWINC.borrow(cs).replace(Some(atwinc1500));
+        IRQ_PIN.borrow(cs).replace(Some(irq));
+    });
+
+    unsafe {
+        pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0);
+    }
+
+    critical_section::with(|cs| {
+        if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
+            atwinc.initialize().unwrap();
+        }
+    });
+
+    critical_section::with(|cs| {
+        if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
+            atwinc.connect_network(connection).unwrap();
+        }
+    });
+
+    critical_section::with(|cs| {
+        if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
+            info!("{:?}", atwinc.get_status());
+        }
+    });
 
     loop {}
+}
+
+#[interrupt]
+fn IO_IRQ_BANK0() {
+    static mut WINC: Option<Atwinc> = None;
+    static mut IRQ: Option<IrqPin> = None;
+
+    if WINC.is_none() {
+        critical_section::with(|cs| {
+            *WINC = ATWINC.borrow(cs).take();
+        });
+    }
+    if IRQ.is_none() {
+        critical_section::with(|cs| {
+            *IRQ = IRQ_PIN.borrow(cs).take();
+        });
+    }
+    info!("Interrupt");
+
+    if let Some(atwinc) = WINC {
+        atwinc.handle_events().unwrap();
+    }
+
+    if let Some(irq) = IRQ {
+        irq.clear_interrupt(EdgeLow);
+    }
 }
