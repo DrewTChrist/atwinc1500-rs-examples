@@ -23,6 +23,7 @@ fugit = "0.3.6"
 atwinc1500 = { path = "../../atwinc1500-rs" }
 critical-section_0_2 = { package = "critical-section", version = "0.2.4", features = ["custom-impl"] }
 critical-section = { version = "1.0.0" }
+nb = "1.0"
 
 [features]
 # critical section that is safe for multicore use
