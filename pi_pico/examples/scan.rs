@@ -18,7 +18,12 @@ use bsp::hal::gpio::Interrupt::EdgeLow;
 use bsp::hal::pac::interrupt;
 use bsp::hal::{
     clocks::{init_clocks_and_plls, Clock},
-    gpio::{self, bank0::Gpio22, dynpin::DynPin, Input, Pin, PullUp},
+    gpio::{
+        self,
+        bank0::{Gpio22, Gpio25},
+        dynpin::DynPin,
+        Input, Output, Pin, PullUp, PushPull,
+    },
     pac,
     sio::Sio,
     spi,
@@ -27,18 +32,18 @@ use bsp::hal::{
 };
 
 use atwinc1500::wifi::Channel;
-use atwinc1500::wifi::Connection;
 use atwinc1500::Atwinc1500;
-//use atwinc1500::Status;
 
 use core::cell::RefCell;
 
 type Atwinc = Atwinc1500<spi::Spi<spi::Enabled, pac::SPI0, 8>, cortex_m::delay::Delay, DynPin>;
 type IrqPin = Pin<Gpio22, Input<PullUp>>;
+type Led = Pin<Gpio25, Output<PushPull>>;
 
 // Define static variables to be passed to the interrupt
 static ATWINC: Mutex<RefCell<Option<Atwinc>>> = Mutex::new(RefCell::new(None));
 static IRQ_PIN: Mutex<RefCell<Option<IrqPin>>> = Mutex::new(RefCell::new(None));
+static LED: Mutex<RefCell<Option<Led>>> = Mutex::new(RefCell::new(None));
 
 #[entry]
 fn main() -> ! {
@@ -85,8 +90,7 @@ fn main() -> ! {
         &embedded_hal::spi::MODE_0,
     );
 
-    let mut onboard_led = pins.led.into_push_pull_output();
-    onboard_led.set_high().unwrap();
+    let onboard_led = pins.led.into_push_pull_output();
 
     let cs: gpio::DynPin = pins.gpio17.into_push_pull_output().into();
     let irq: IrqPin = pins.gpio22.into_pull_up_input().into();
@@ -102,21 +106,12 @@ fn main() -> ! {
         Err(e) => info!("{}", e),
     }
 
-    info!("Create atwinc struct");
-
-    // Read ssid from environment variable
-    const SSID: &[u8] = "".as_bytes(); //core::env!("SSID").as_bytes();
-    // Read password from environment variable
-    const PASS: &[u8] = "".as_bytes(); //core::env!("PASS").as_bytes();
-
-    // Create connection parameters
-    let connection = Connection::wpa_psk(SSID, PASS, Channel::default(), 0);
-
     critical_section::with(|cs| {
         // Store the driver and irq pin in
         // the static variables
         ATWINC.borrow(cs).replace(Some(atwinc1500));
         IRQ_PIN.borrow(cs).replace(Some(irq));
+        LED.borrow(cs).replace(Some(onboard_led));
     });
 
     unsafe {
@@ -124,33 +119,52 @@ fn main() -> ! {
     }
 
     critical_section::with(|cs| {
-        if let Some(atwinc) = ATWINC.borrow(cs).take() {
-            // Check status of atwinc
-            // it should be idle
-            info!("Status: {:?}", atwinc.get_status());
-            ATWINC.borrow(cs).replace(Some(atwinc));
-        }
-    });
-
-    critical_section::with(|cs| {
         if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
-            // Connect to the network with our connection parameters
-            match atwinc.connect_network(connection) {
+            // request network scan
+            match atwinc.request_network_scan(Channel::default()) {
                 Ok(_) => {}
-                Err(e) => info!("Error connecting to network: {}", e),
+                Err(e) => info!("Error requesting network scan: {}", e),
             }
             ATWINC.borrow(cs).replace(Some(atwinc));
         }
     });
 
-    count_down.start(6000u32.millis());
+    count_down.start(2000u32.millis());
     let _ = nb::block!(count_down.wait());
 
-    critical_section::with(|cs| {
-        if let Some(atwinc) = ATWINC.borrow(cs).take() {
-            info!("{:?}", atwinc.get_status());
+    let mut net_counter: u8 = 0;
+    let mut leave = false;
+
+    loop {
+        critical_section::with(|cs| {
+            if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
+                if atwinc.num_ap() > 0 {
+                    if net_counter < atwinc.num_ap() {
+                        atwinc.request_scan_result(net_counter).unwrap();
+                        net_counter += 1;
+                    } else {
+                        leave = true;
+                    }
+                }
+                ATWINC.borrow(cs).replace(Some(atwinc));
+            }
+        });
+        if leave {
+            break;
         }
-    });
+        count_down.start(500u32.millis());
+        let _ = nb::block!(count_down.wait());
+        critical_section::with(|cs| {
+            if let Some(atwinc) = ATWINC.borrow(cs).take() {
+                if !atwinc.scan_result().is_none() {
+                    info!("{:?}", atwinc.scan_result());
+                } else {
+                    info!("No scan result");
+                }
+                ATWINC.borrow(cs).replace(Some(atwinc));
+            }
+        });
+    }
 
     loop {}
 }
@@ -160,17 +174,20 @@ fn IO_IRQ_BANK0() {
     info!("Enter Interrupt");
     critical_section::with(|cs| {
         // Take the driver an interrupt request pin
-        let winc = ATWINC.borrow(cs).take();
         let irq = IRQ_PIN.borrow(cs).take();
+        let (winc, led) = (ATWINC.borrow(cs).take(), LED.borrow(cs).take());
 
-        if let Some(mut atwinc) = winc {
+        if let (Some(mut atwinc), Some(mut onboard_led)) = (winc, led) {
+            onboard_led.set_high().unwrap();
             // Handle driver events and then
             // put it back in the static variable
             match atwinc.handle_events() {
                 Ok(_) => {}
                 Err(e) => info!("Error handling events in interrupt: {}", e),
             }
+            onboard_led.set_low().unwrap();
             ATWINC.borrow(cs).replace_with(|_| Some(atwinc));
+            LED.borrow(cs).replace_with(|_| Some(onboard_led));
         }
 
         if let Some(mut irq_pin) = irq {

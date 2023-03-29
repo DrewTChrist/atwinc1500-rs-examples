@@ -3,8 +3,8 @@
 
 use cortex_m_rt::entry;
 use defmt_rtt as _;
-use embedded_time::fixed_point::FixedPoint;
-use embedded_time::rate::Extensions;
+use embedded_hal::digital::v2::OutputPin;
+use fugit::RateExtU32;
 use panic_probe as _;
 
 use rp_pico as bsp;
@@ -43,7 +43,7 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
+    let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
@@ -64,11 +64,12 @@ fn main() -> ! {
     );
 
     let cs: gpio::DynPin = pins.gpio17.into_push_pull_output().into();
-    let irq: gpio::DynPin = pins.gpio22.into_pull_up_input().into();
+    let _irq: gpio::DynPin = pins.gpio22.into_pull_up_input().into();
     let reset: gpio::DynPin = pins.gpio21.into_push_pull_output().into();
-    let en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
+    let mut en_wake: gpio::DynPin = pins.gpio20.into_push_pull_output().into();
+    en_wake.set_high().unwrap();
 
-    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, en_wake, false).unwrap();
+    let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, reset, false);
 
     // Turn on the green LED
     // on the Adafruit Atwinc1500 breakout
