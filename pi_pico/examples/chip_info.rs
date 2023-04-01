@@ -68,6 +68,7 @@ fn main() -> ! {
     en_wake.set_high().unwrap();
 
     let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, reset, false);
+    atwinc1500.initialize().unwrap();
 
     // Get and print the version of the firmware
     // running on the Atwinc1500

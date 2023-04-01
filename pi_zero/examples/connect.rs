@@ -8,8 +8,6 @@ use atwinc1500::Atwinc1500;
 use atwinc1500::wifi::Channel;
 use atwinc1500::wifi::ConnectionParameters;
 
-use core::env;
-
 const GPIO_27: u8 = 27;
 const GPIO_22: u8 = 22;
 const GPIO_17: u8 = 17;
@@ -43,9 +41,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, irq, reset, enable, false).unwrap();
 
     // Read ssid from environment variable
-    const SSID: &[u8] = env!("SSID").as_bytes();
+    const SSID: &[u8] = "".as_bytes(); //core::env!("SSID").as_bytes();
     // Read password from environment variable
-    const PASS: &[u8] = env!("PASS").as_bytes();
+    const PASS: &[u8] = "".as_bytes(); //core::env!("PASS").as_bytes();
 
     // Connect to the network with our connection
     // parameters
