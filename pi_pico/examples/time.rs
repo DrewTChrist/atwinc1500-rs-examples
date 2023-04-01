@@ -96,7 +96,6 @@ fn main() -> ! {
     en_wake.set_high().unwrap();
 
     let mut atwinc1500 = Atwinc1500::new(spi, delay, cs, reset, false);
-    //atwinc1500.initialize().unwrap();
     match atwinc1500.initialize() {
         Ok(()) => {}
         Err(e) => info!("{}", e),
@@ -106,7 +105,7 @@ fn main() -> ! {
 
     // Read ssid from environment variable
     const SSID: &[u8] = "".as_bytes(); //core::env!("SSID").as_bytes();
-    // Read password from environment variable
+                                       // Read password from environment variable
     const PASS: &[u8] = "".as_bytes(); //core::env!("PASS").as_bytes();
 
     // Create connection parameters
@@ -124,15 +123,6 @@ fn main() -> ! {
     }
 
     critical_section::with(|cs| {
-        if let Some(atwinc) = ATWINC.borrow(cs).take() {
-            // Check status of atwinc
-            // it should be idle
-            info!("Status: {:?}", atwinc.get_status());
-            ATWINC.borrow(cs).replace(Some(atwinc));
-        }
-    });
-
-    critical_section::with(|cs| {
         if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
             // Connect to the network with our connection parameters
             match atwinc.connect_network(connection) {
@@ -143,25 +133,24 @@ fn main() -> ! {
         }
     });
 
-    count_down.start(3000u32.millis());
+    count_down.start(1000u32.millis());
     let _ = nb::block!(count_down.wait());
 
     critical_section::with(|cs| {
         if let Some(mut atwinc) = ATWINC.borrow(cs).take() {
-            info!("{:?}", atwinc.request_connection_info());
+            atwinc.request_system_time().unwrap();
             ATWINC.borrow(cs).replace(Some(atwinc));
         }
     });
 
-    count_down.start(3000u32.millis());
+    count_down.start(1000u32.millis());
     let _ = nb::block!(count_down.wait());
     let mut leave = false;
-
     loop {
         critical_section::with(|cs| {
             if let Some(atwinc) = ATWINC.borrow(cs).take() {
-                if !atwinc.connection_info().is_none() {
-                    info!("{:?}", atwinc.connection_info());
+                if !atwinc.get_system_time().is_none() {
+                    info!("{:?}", atwinc.get_system_time());
                     leave = true;
                 }
                 ATWINC.borrow(cs).replace(Some(atwinc));
@@ -171,7 +160,6 @@ fn main() -> ! {
             break;
         }
     }
-
     loop {}
 }
 
