@@ -20,11 +20,11 @@ This is a set of examples for the atwinc1500 crate using different host targets.
 |Gpio 20|WAKE|
 
 #### Examples
-chip_info - Get the firmware version and mac address of the Atwinc1500
-connect - Connect to a network with wpa2
-led - Control an led on the Adafruit Atwinc1500 Breakout
-scan - Scan for networks
-time - Get the system time from the Atwinc1500 sntp client
+* chip_info - Get the firmware version and mac address of the Atwinc1500
+* connect - Connect to a network with wpa2
+* led - Control an led on the Adafruit Atwinc1500 Breakout
+* scan - Scan for networks
+* time - Get the system time from the Atwinc1500 sntp client
 
 ### Raspberry Pi Zero 1.3 + Adafruit Atwinc1500 Breakout Board
 #### Wiring
@@ -42,9 +42,9 @@ time - Get the system time from the Atwinc1500 sntp client
 |Gpio 5|WAKE|
 
 #### Examples
-chip_info - Get the firmware version and mac address of the Atwinc1500
-connect - Connect to a network with wpa2
-led - Control an led on the Adafruit Atwinc1500 Breakout
+* chip_info - Get the firmware version and mac address of the Atwinc1500
+* connect - Connect to a network with wpa2
+* led - Control an led on the Adafruit Atwinc1500 Breakout
 
 ### STM32F3 Discovery Board + Adafruit Atwinc1500 Breakout Board
 #### Wiring
@@ -62,6 +62,6 @@ led - Control an led on the Adafruit Atwinc1500 Breakout
 |pe10|WAKE|
 
 #### Examples
-chip_info - Get the firmware version and mac address of the Atwinc1500
-connect - Connect to a network with wpa2
-led - Control an led on the Adafruit Atwinc1500 Breakout
+* chip_info - Get the firmware version and mac address of the Atwinc1500
+* connect - Connect to a network with wpa2
+* led - Control an led on the Adafruit Atwinc1500 Breakout
