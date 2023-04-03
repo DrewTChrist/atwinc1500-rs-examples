@@ -44,8 +44,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         Ok(mut at) => {
             // Turn on the green LED
             // on the Adafruit Atwinc1500 breakout
-            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output).unwrap();
-            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High).unwrap();
+            at.set_gpio_direction(AtwincGpio::Gpio4, GpioDirection::Output)
+                .unwrap();
+            at.set_gpio_value(AtwincGpio::Gpio4, GpioValue::High)
+                .unwrap();
         }
         Err(e) => panic!("{}", e),
     }
